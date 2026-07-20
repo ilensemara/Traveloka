@@ -1,66 +1,51 @@
+
 import streamlit as st
 import pandas as pd
-import re
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
+import joblib
+import re # Untuk fungsi preprocess_teks
 
-st.title("Analisis Sentimen Traveloka")
+# --- 1. Load Model dan TF-IDF Vectorizer yang Sudah Disimpan ---
+model = joblib.load('model.pkl') # Ganti 'model.pkl' dengan nama file model Anda
+vectorizer = joblib.load('tfidf.pkl') # Ganti 'tfidf.pkl' dengan nama file vectorizer Anda
 
-# Load dataset
-df = pd.read_csv(
-    "Traveloka-id application rating and review dataset.csv",
-    sep=";",
-    encoding="latin-1"
-)
+# --- 2. Fungsi Preprocessing (sesuai dengan yang digunakan saat pelatihan model) ---
+stopwords_indonesia = set([
+    "yang", "dan", "di", "dari", "ke", "ini", "itu", "dengan", "untuk",
+    "ada", "adalah", "bisa", "aja", "sudah", "saya", "aplikasi", "app",
+    "kalo", "kalau", "tapi", "akan", "telah", "oleh", "atau", "pada"
+])
 
-# Label sentimen
-def label_sentimen(rating):
-    if rating in [1, 2]:
-        return "Negatif"
-    elif rating == 3:
-        return "Netral"
+def preprocess_teks(ulasan):
+    ulasan_bersih = ulasan.lower()
+    ulasan_bersih = re.sub(r'[^a-z\s]', ' ', ulasan_bersih)
+    tokens = ulasan_bersih.split()
+    tokens_filtered = [kata for kata in tokens if kata not in stopwords_indonesia]
+    return " ".join(tokens_filtered)
+
+# --- 3. Streamlit App Interface ---
+st.title("Analisis Sentimen Ulasan Traveloka")
+st.write("Masukkan ulasan untuk memprediksi sentimennya.")
+
+user_input = st.text_area("Ulasan:", "")
+
+if st.button("Prediksi Sentimen"):
+    if user_input:
+        # Preprocessing input pengguna
+        clean_text = preprocess_teks(user_input)
+        
+        # Vectorisasi
+        vec_text = vectorizer.transform([clean_text])
+        
+        # Prediksi
+        prediction = model.predict(vec_text)
+        prediction_proba = model.predict_proba(vec_text)
+        
+        st.subheader("Hasil Prediksi:")
+        st.write(f"Sentimen: **{prediction[0]}**")
+        
+        # Menampilkan probabilitas
+        proba_df = pd.DataFrame(prediction_proba, columns=model.classes_)
+        st.write("Probabilitas Sentimen:")
+        st.dataframe(proba_df)
     else:
-        return "Positif"
-
-df["Sentimen"] = df["Bintang"].apply(label_sentimen)
-
-# Preprocessing
-stopwords_indonesia = {
-    "yang","dan","di","dari","ke","ini","itu","dengan",
-    "untuk","ada","adalah","bisa","aja","sudah","saya"
-}
-
-def preprocess(teks):
-    teks = str(teks).lower()
-    teks = re.sub(r'[^a-z\s]', ' ', teks)
-    tokens = [
-        kata for kata in teks.split()
-        if kata not in stopwords_indonesia
-    ]
-    return " ".join(tokens)
-
-df["Ulasan_Clean"] = df["Ulasan"].apply(preprocess)
-
-# TF-IDF
-vectorizer = TfidfVectorizer(max_features=5000)
-X = vectorizer.fit_transform(df["Ulasan_Clean"])
-y = df["Sentimen"]
-
-# Training model
-model = MultinomialNB()
-model.fit(X, y)
-
-# Input user
-st.subheader("Cek Sentimen Ulasan")
-
-review = st.text_area(
-    "Masukkan ulasan:"
-)
-
-if st.button("Prediksi"):
-    clean_review = preprocess(review)
-    review_vec = vectorizer.transform([clean_review])
-
-    prediksi = model.predict(review_vec)[0]
-
-    st.success(f"Sentimen: {prediksi}")
+        st.warning("Mohon masukkan ulasan untuk diproses.")
