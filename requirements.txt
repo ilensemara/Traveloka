@@ -1,5 +1,6 @@
+%%writefile requirements.txt
 streamlit
 pandas
-scikit-learn==1.6.1
+scikit-learn==1.4.2
 joblib
-matplotlib
+numpy==1.26.4
