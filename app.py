@@ -1,25 +1,34 @@
+
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# 1. Judul Aplikasi
-st.title("Hasil Analisis Perhitungan")
+st.title("Analisis Sentimen Traveloka")
 
-# 2. Logika Perhitungan Anda dari Colab
-# Contoh: Membaca dataset / menghitung rumus
-data = {'Kategori': ['A', 'B', 'C'], 'Nilai': [10, 25, 15]}
-df = pd.DataFrame(data)
+# Load the correct dataset
+df = pd.read_csv("Traveloka-id application rating and review dataset.csv", sep=";", encoding="latin-1")
 
-total_nilai = df['Nilai'].sum()
+# Clean and preprocess the data as done in the notebook
+df_clean = df[['Bintang', 'Ulasan']].dropna()
+df_clean['Bintang'] = pd.to_numeric(df_clean['Bintang'], errors='coerce')
+df_clean = df_clean.dropna(subset=['Bintang'])
+df_clean['Bintang'] = df_clean['Bintang'].astype(int)
+df_clean = df_clean[df_clean['Bintang'].between(1, 5)]
 
-# 3. Menampilkan Hasil Perhitungan ke Streamlit
-st.metric(label="Total Nilai Perhitungan", value=total_nilai)
+# Define the sentiment labeling function
+def label_sentimen(rating):
+    if rating in [1, 2]: return 'Negatif'
+    elif rating == 3: return 'Netral'
+    else: return 'Positif'
 
-# Menampilkan Tabel Data
-st.subheader("Tabel Data")
-st.dataframe(df)
+# Apply sentiment labeling
+df_clean['Sentimen'] = df_clean['Bintang'].apply(label_sentimen)
 
-# Menampilkan Grafik (jika ada)
+st.subheader("Distribusi Sentimen")
 fig, ax = plt.subplots()
-ax.bar(df['Kategori'], df['Nilai'])
+df_clean["Sentimen"].value_counts().plot(kind="bar", ax=ax, color=['#4CAF50', '#FFC107', '#F44336'])
+ax.set_title('Distribusi Sentimen Ulasan Traveloka')
+ax.set_xlabel('Sentimen')
+ax.set_ylabel('Jumlah Ulasan')
+plt.xticks(rotation=45)
 st.pyplot(fig)
