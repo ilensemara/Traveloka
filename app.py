@@ -1,4 +1,3 @@
-
 import streamlit as st
 import joblib
 import re
@@ -9,12 +8,12 @@ import pandas as pd
 def load_resources():
     vectorizer = joblib.load('models/tfidf_vectorizer.pkl')
     nb_model = joblib.load('models/multinomial_nb_model.pkl')
-    svm_model = joblib.load('models/svm_model.pkl') # <--- Perbaikan di sini!
+    svm_model = joblib.load('models/svm_model.pkl')
     return vectorizer, nb_model, svm_model
 
 vectorizer, nb_model, svm_model = load_resources()
 
-# Preprocessing function (copy from your notebook)
+# Preprocessing function
 stopwords_indonesia = set([
     "yang", "dan", "di", "dari", "ke", "ini", "itu", "dengan", "untuk",
     "ada", "adalah", "bisa", "aja", "sudah", "saya", "aplikasi", "app",
@@ -42,31 +41,31 @@ if st.button('Analisis Sentimen'):
         # Transform input using TF-IDF Vectorizer
         input_tfidf = vectorizer.transform([cleaned_input])
 
-        # Predict sentiment with Naïve Bayes
-        nb_prediction = nb_model.predict(input_tfidf)[0]
+        # Predict sentiment with Naïve Bayes & SVM
+        nb_pred = nb_model.predict(input_tfidf)[0]
+        svm_pred = svm_model.predict(input_tfidf)[0]
 
-        # Predict sentiment with SVM
-        svm_prediction = svm_model.predict(input_tfidf)[0]
+        st.write('---')
+        
+        # 1. Output Naïve Bayes
+        st.subheader(f'Hasil Analisis Sentimen (Naïve Bayes): {nb_pred}')
+        if str(nb_pred).lower() == 'negatif':
+            st.error('📌 **Keterangan:** Naïve Bayes mendeteksi ulasan ini berisi keluhan, kekecewaan, atau kendala layanan.')
+        elif str(nb_pred).lower() == 'positif':
+            st.success('📌 **Keterangan:** Naïve Bayes mendeteksi ulasan ini berisi pujian atau kepuasan terhadap layanan.')
+        else:
+            st.info('📌 **Keterangan:** Naïve Bayes mendeteksi ulasan ini bersifat netral atau informasi umum.')
 
-        st.subheader('Hasil Analisis Sentimen:')
-        st.write(f'**Naïve Bayes:** {nb_prediction}')
-        st.write(f'**SVM:** {svm_prediction}')
+        st.write('')
 
-        # Optional: Show prediction probabilities
-        nb_proba = nb_model.predict_proba(input_tfidf)[0]
-        svm_proba = svm_model.predict_proba(input_tfidf)[0]
-
-        sentiment_labels = nb_model.classes_ # Assuming both models have the same class order
-
-        st.write('--')
-        st.write('**Probabilitas Prediksi (Naïve Bayes):**')
-        for label, prob in zip(sentiment_labels, nb_proba):
-            st.write(f'- {label}: {prob:.2f}')
-
-        st.write('--')
-        st.write('**Probabilitas Prediksi (SVM):**')
-        for label, prob in zip(sentiment_labels, svm_proba):
-            st.write(f'- {label}: {prob:.2f}')
+        # 2. Output SVM
+        st.subheader(f'Hasil Analisis Sentimen (SVM): {svm_pred}')
+        if str(svm_pred).lower() == 'negatif':
+            st.error('📌 **Keterangan:** SVM mendeteksi ulasan ini berisi keluhan, kekecewaan, atau kendala layanan.')
+        elif str(svm_pred).lower() == 'positif':
+            st.success('📌 **Keterangan:** SVM mendeteksi ulasan ini berisi pujian atau kepuasan terhadap layanan.')
+        else:
+            st.info('📌 **Keterangan:** SVM mendeteksi ulasan ini bersifat netral atau informasi umum.')
 
     else:
         st.warning('Mohon masukkan ulasan untuk dianalisis.')
